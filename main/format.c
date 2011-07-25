@@ -757,6 +757,15 @@ int ast_format_rate(const struct ast_format *format)
 			return samplerate;
 		}
 	}
+	case AST_FORMAT_OPUS:
+	{
+		int samplerate;
+		if (!(ast_format_get_value(format,
+			OPUS_ATTR_KEY_SAMP_RATE,
+			&samplerate))) {
+			return samplerate;
+		}
+	}
 	default:
 		return 8000;
 	}
@@ -1094,6 +1103,68 @@ init_cleanup:
 	return -1;
 }
 
+static int custom_opus_format(struct ast_format_list *entry, unsigned int maxbitrate, int usedtx, int usefec, int cbr)
+{
+	if (!entry->samplespersecond) {
+		ast_log(LOG_WARNING, "Custom OPUS format definition '%s' requires sample rate to be defined.\n", entry->name);
+	}
+	ast_format_set(&entry->format, AST_FORMAT_OPUS, 0);
+
+	if (!has_interface(&entry->format)) {
+		return -1;
+	}
+
+	switch (entry->samplespersecond) {
+	case 8000:
+		ast_copy_string(entry->desc, "OPUS Custom Format 8khz", sizeof(entry->desc));
+		ast_format_append(&entry->format,
+			OPUS_ATTR_KEY_SAMP_RATE, OPUS_ATTR_VAL_SAMP_8KHZ,
+			AST_FORMAT_ATTR_END);
+		break;
+	case 12000:
+		ast_copy_string(entry->desc, "OPUS Custom Format 12khz", sizeof(entry->desc));
+		ast_format_append(&entry->format,
+			OPUS_ATTR_KEY_SAMP_RATE, OPUS_ATTR_VAL_SAMP_12KHZ,
+			AST_FORMAT_ATTR_END);
+		break;
+	case 16000:
+		ast_copy_string(entry->desc, "OPUS Custom Format 16khz", sizeof(entry->desc));
+		ast_format_append(&entry->format,
+			OPUS_ATTR_KEY_SAMP_RATE, OPUS_ATTR_VAL_SAMP_16KHZ,
+			AST_FORMAT_ATTR_END);
+		break;
+	case 24000:
+		ast_copy_string(entry->desc, "OPUS Custom Format 24khz", sizeof(entry->desc));
+		ast_format_append(&entry->format,
+			OPUS_ATTR_KEY_SAMP_RATE, OPUS_ATTR_VAL_SAMP_24KHZ,
+			AST_FORMAT_ATTR_END);
+		break;
+	case 48000:
+		ast_copy_string(entry->desc, "OPUS Custom Format 48khz", sizeof(entry->desc));
+		ast_format_append(&entry->format,
+			OPUS_ATTR_KEY_SAMP_RATE, OPUS_ATTR_VAL_SAMP_48KHZ,
+			AST_FORMAT_ATTR_END);
+		break;
+
+	default:
+		ast_log(LOG_WARNING, "Custom OPUS format definition '%s' can not support sample rate %d\n", entry->name, entry->samplespersecond);
+		return -1;
+	}
+	ast_format_append(&entry->format,
+			OPUS_ATTR_KEY_MAX_BITRATE, maxbitrate,
+			OPUS_ATTR_KEY_DTX, usedtx ? 1 : 0,
+			OPUS_ATTR_KEY_FEC, usefec ? 1 : 0,
+			OPUS_ATTR_KEY_CBR, cbr,
+			AST_FORMAT_ATTR_END);
+
+	entry->fr_len = 80;
+	entry->min_ms = 20;
+	entry->max_ms = 20;
+	entry->inc_ms = 20;
+	entry->def_ms = 20;
+	return 0;
+}
+
 static int custom_celt_format(struct ast_format_list *entry, unsigned int maxbitrate, unsigned int framesize)
 {
 	if (!entry->samplespersecond) {
@@ -1181,6 +1252,8 @@ static int conf_process_format_name(const char *name, enum ast_format_id *id)
 		*id = AST_FORMAT_SILK;
 	} else if (!strcasecmp(name, "celt")) {
 		*id = AST_FORMAT_CELT;
+	} else if (!strcasecmp(name, "opus")) {
+		*id = AST_FORMAT_OPUS;
 	} else {
 		*id = 0;
 		return -1;
@@ -1229,6 +1302,7 @@ static int load_format_config(void)
 		unsigned int maxbitrate;
 		unsigned int framesize;
 		unsigned int packetloss_percentage;
+		int cbr;
 		int usefec;
 		int usedtx;
 	} settings;
@@ -1270,6 +1344,8 @@ static int load_format_config(void)
 					ast_log(LOG_WARNING, "framesize '%s' at line %d of %s is not supported.\n",
 						var->value, var->lineno, FORMAT_CONFIG);
 				}
+			} else if (!strcasecmp(var->name, "constant_bit_rate")) {
+				settings.cbr = ast_true(var->value) ? 1 : 0;
 			} else if (!strcasecmp(var->name, "dtx")) {
 				settings.usedtx = ast_true(var->value) ? 1 : 0;
 			} else if (!strcasecmp(var->name, "fec")) {
@@ -1293,6 +1369,10 @@ static int load_format_config(void)
 				add_it = 1;
 			}
 			break;
+		case AST_FORMAT_OPUS:
+			if (!(custom_opus_format(&entry, settings.maxbitrate, settings.usedtx, settings.usefec, settings.cbr))) {
+				add_it = 1;
+			}
 		default:
 			ast_log(LOG_WARNING, "Can not create custom format %s\n", entry.name);
 		}
