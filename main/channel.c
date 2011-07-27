@@ -1079,6 +1079,8 @@ struct ast_format *ast_best_codec(struct ast_format_cap *cap, struct ast_format 
 		AST_FORMAT_SPEEX32,
 		AST_FORMAT_SPEEX16,
 		AST_FORMAT_SPEEX,
+		/*! Opus is SILK and CELT combined */
+		AST_FORMAT_OPUS,
 		/*! SILK is pretty awesome. */
 		AST_FORMAT_SILK,
 		/*! CELT supports crazy high sample rates */
