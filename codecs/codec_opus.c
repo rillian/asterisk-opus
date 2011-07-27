@@ -119,6 +119,11 @@ static int opus_enc_set(struct ast_trans_pvt *pvt, struct ast_format *slin_src)
 	enc->frame_size = opus_rate / (1000 / DEFAULT_TIME_PERIOD);
 	enc->sample_rate = opus_rate;
 
+	pvt->samples = 0;
+	memset(enc->frame_offsets, 0, sizeof(enc->frame_offsets));
+	enc->frame_offsets_num = 0;
+	enc->frame_offsets_numbytes = OUTBUF_SIZE;
+
 	enc->init = 1;
 
 	return 0;
@@ -210,6 +215,8 @@ static int opus_enc_framein(struct ast_trans_pvt *pvt, struct ast_frame *f)
 	slin_data = enc->slin_buf;
 	opus_data = (unsigned char *) pvt->outbuf.c;
 
+	ast_log(LOG_NOTICE, "SLIN SAMPLES: %d  NEEDED SAMPLES %d\n", enc->slin_samples, enc->frame_size);
+
 	for ( ; enc->slin_samples >= enc->frame_size; enc->slin_samples -= enc->frame_size) {
 		num_bytes = opus_encode(enc->enc, slin_data, enc->frame_size, opus_data, enc->frame_offsets_numbytes);
 
@@ -228,7 +235,6 @@ static int opus_enc_framein(struct ast_trans_pvt *pvt, struct ast_frame *f)
 		enc->frame_offsets_numbytes += num_bytes;
 
 		pvt->samples += enc->frame_size;
-
 		slin_data += enc->frame_size; /* increments by int16_t samples */
 		opus_data += num_bytes; /* increments by bytes */
 	}
@@ -268,10 +274,11 @@ static struct ast_frame *opus_enc_frameout(struct ast_trans_pvt *pvt)
 		}
 	}
 
-
 	pvt->samples = 0;
 	memset(enc->frame_offsets, 0, sizeof(enc->frame_offsets));
 	enc->frame_offsets_num = 0;
+	enc->frame_offsets_numbytes = OUTBUF_SIZE;\
+
 	return frame;
 }
 
