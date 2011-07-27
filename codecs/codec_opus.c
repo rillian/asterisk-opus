@@ -215,7 +215,6 @@ static int opus_enc_framein(struct ast_trans_pvt *pvt, struct ast_frame *f)
 	slin_data = enc->slin_buf;
 	opus_data = (unsigned char *) pvt->outbuf.c;
 
-	ast_log(LOG_NOTICE, "SLIN SAMPLES: %d  NEEDED SAMPLES %d\n", enc->slin_samples, enc->frame_size);
 
 	for ( ; enc->slin_samples >= enc->frame_size; enc->slin_samples -= enc->frame_size) {
 		num_bytes = opus_encode(enc->enc, slin_data, enc->frame_size, opus_data, enc->frame_offsets_numbytes);
@@ -292,8 +291,8 @@ static int opus_dec_framein(struct ast_trans_pvt *pvt, struct ast_frame *f)
 		opus_dec_set(pvt, &f->subclass.format);
 	}
 
-	error = opus_decode(dec->dec, f->data.ptr, f->datalen, dec->slin_buf, dec->frame_size, 1);
-	if (error) {
+	error = opus_decode(dec->dec, f->data.ptr, f->datalen, dec->slin_buf, dec->frame_size, 0);
+	if (error <= 0) {
 		ast_log(LOG_WARNING, "error decoding OPUS, error code %d\n", error);
 		return -1;
 	}
@@ -303,7 +302,6 @@ static int opus_dec_framein(struct ast_trans_pvt *pvt, struct ast_frame *f)
 
 	return 0;
 }
-
 
 static struct ast_frame *opus_dec_frameout(struct ast_trans_pvt *pvt)
 {
@@ -337,11 +335,10 @@ static struct ast_frame *opus_dec_frameout(struct ast_trans_pvt *pvt)
 	tmp.samples = samples;
 	tmp.src = pvt->t->name;
 	tmp.offset = AST_FRIENDLY_OFFSET;
-
 	pvt->samples = 0;
+
 	return ast_frdup(&tmp);
 }
-
 
 static int unload_module(void)
 {
