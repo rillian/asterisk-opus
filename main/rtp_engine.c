@@ -1930,6 +1930,13 @@ int ast_rtp_engine_load_format(const struct ast_format *format)
 		set_next_mime_type(format, 0, "audio", "CELT", ast_format_rate(format));
 		add_static_payload(-1, format, 0);
 		break;
+	case AST_FORMAT_OPUS:
+		/* Right now OPUS is always advertised at 48khz.  The actual max sample rate is
+		 * defined in the a=fmtp maxcodedaudiobandwidth parameter. */
+		set_next_mime_type(format, 0, "audio", "opus", 48000);
+		add_static_payload(-1, format, 0);
+		break;
+
 	default:
 		break;
 	}
