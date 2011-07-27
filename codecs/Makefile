@@ -63,3 +63,6 @@ endif
 
 $(if $(filter codec_resample,$(EMBEDDED_MODS)),modules.link,codec_resample.so): speex/resample.o
 speex/resample.o: _ASTCFLAGS+=$(call MOD_ASTCFLAGS,codec_resample) $(SPEEX_RESAMPLE_CFLAGS)
+
+$(if $(filter codec_opus,$(EMBEDDED_MODS)),modules.link,codec_opus.so): speex/resample.o /usr/local/lib/libopus.so
+speex/resample.o: _ASTCFLAGS+=$(call MOD_ASTCFLAGS,codec_resample) $(SPEEX_RESAMPLE_CFLAGS)
