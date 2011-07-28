@@ -27,14 +27,23 @@
 
 /*! OPUS format attribute key value pairs, all are accessible through ast_format_get_value()*/
 enum opus_attr_keys {
-	OPUS_ATTR_KEY_SAMP_RATE, /*!< value is opus_attr_vals enum */
+	OPUS_ATTR_KEY_SAMP_RATE, /*!< value is in opus_attr_vals enum */
 	OPUS_ATTR_KEY_DTX, /*!< value is an int, 1 dtx is enabled, 0 dtx not enabled. */
 	OPUS_ATTR_KEY_FEC, /*!< value is an int, 1 encode with FEC, 0 do not use FEC. */
 	OPUS_ATTR_KEY_CBR, /*!< value is an int, 1 encode with constant bit rate, 0 do not encode with constant bit rate. */
 	OPUS_ATTR_KEY_MAX_BITRATE, /*!< value is an int */
+	OPUS_ATTR_KEY_PTIME,  /*!< value is in opus_attr_vals enum */
+	OPUS_ATTR_KEY_MODE,  /*!< AUDIO or VOICE mode */
 };
 
 enum opus_attr_vals {
+	OPUS_ATTR_VAL_MODE_VOICE = 0,
+	OPUS_ATTR_VAL_MODE_AUDIO = 1,
+	OPUS_ATTR_VAL_PTIME_5 = 5, /* 5ms per frame */
+	OPUS_ATTR_VAL_PTIME_10 = 10, /* 10ms per frame */
+	OPUS_ATTR_VAL_PTIME_20 = 20, /* 20ms per frame */
+	OPUS_ATTR_VAL_PTIME_40 = 40, /* 40ms per frame */
+	OPUS_ATTR_VAL_PTIME_60 = 60, /* 40ms per frame */
 	OPUS_ATTR_VAL_SAMP_8KHZ = 8000,
 	OPUS_ATTR_VAL_SAMP_12KHZ = 12000,
 	OPUS_ATTR_VAL_SAMP_16KHZ = 16000,

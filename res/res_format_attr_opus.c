@@ -41,6 +41,8 @@ struct opus_attr {
 	unsigned int dtx;
 	unsigned int fec;
 	unsigned int cbr;
+	unsigned int ptime;
+	unsigned int mode;
 };
 
 static enum ast_format_cmp_res opus_cmp(const struct ast_format_attr *fattr1, const struct ast_format_attr *fattr2)
@@ -75,6 +77,10 @@ static int opus_get_val(const struct ast_format_attr *fattr, int key, void *resu
 	case OPUS_ATTR_KEY_CBR:
 		*val = attr->cbr;
 		break;
+	case OPUS_ATTR_KEY_PTIME:
+		*val = attr->ptime;
+	case OPUS_ATTR_KEY_MODE:
+		*val = attr->mode;
 	default:
 		return -1;
 		ast_log(LOG_WARNING, "unknown attribute type %d\n", key);
@@ -117,6 +123,16 @@ static int opus_isset(const struct ast_format_attr *fattr, va_list ap)
 				return -1;
 			}
 			break;
+		case OPUS_ATTR_KEY_PTIME:
+			if (attr->ptime != (va_arg(ap, int))) {
+				return -1;
+			}
+			break;
+		case OPUS_ATTR_KEY_MODE:
+			if (attr->mode != (va_arg(ap, int))) {
+				return -1;
+			}
+			break;
 		default:
 			return -1;
 			ast_log(LOG_WARNING, "unknown attribute type %d\n", key);
@@ -150,6 +166,10 @@ static int opus_getjoint(const struct ast_format_attr *fattr1, const struct ast_
 	/* If CBR is requested, use it */
 	attr_res->cbr = attr1->cbr || attr2->cbr ? 1 : 0;
 
+	attr_res->ptime = MIN(attr1->ptime, attr2->ptime);
+
+	attr_res->mode = MIN(attr1->mode, attr2->mode);
+
 	return joint;
 }
 
@@ -177,6 +197,12 @@ static void opus_set(struct ast_format_attr *fattr, va_list ap)
 			break;
 		case OPUS_ATTR_KEY_CBR:
 			attr->cbr = (va_arg(ap, int));
+			break;
+		case OPUS_ATTR_KEY_PTIME:
+			attr->ptime = (va_arg(ap, int));
+			break;
+		case OPUS_ATTR_KEY_MODE:
+			attr->mode = (va_arg(ap, int));
 			break;
 		default:
 			ast_log(LOG_WARNING, "unknown attribute type %d\n", key);

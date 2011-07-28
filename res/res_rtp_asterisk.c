@@ -381,7 +381,17 @@ static int rtp_sendto(struct ast_rtp_instance *instance, void *buf, size_t size,
 
 static int rtp_get_rate(struct ast_format *format)
 {
-	return (format->id == AST_FORMAT_G722) ? 8000 : ast_format_rate(format);
+	/* Sometimes RFCs are weird, and the actual rate of a format
+	 * isn't want we use for the RTP timestamp.  This is a place
+	 * for those exceptions. */
+	switch (format->id) {
+	case AST_FORMAT_G722:
+		return 8000;
+	case AST_FORMAT_OPUS:
+		return 48000;
+	default:
+		return ast_format_rate(format);
+	}
 }
 
 static unsigned int ast_rtcp_calc_interval(struct ast_rtp *rtp)

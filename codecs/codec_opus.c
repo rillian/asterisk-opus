@@ -73,7 +73,6 @@ struct opus_encoder_pvt {
 	unsigned int frame_size;
 	/* OPUS output sample rate */
 	unsigned int sample_rate;
-
 	/*! Number of current valid out frame buffers */
 	unsigned int frame_offsets_num;
 	/*! The current number of bytes stored in the frame offsets. */
@@ -84,12 +83,17 @@ struct opus_encoder_pvt {
 		unsigned int len;
 	} frame_offsets[MAX_ENC_RETURN_FRAMES];
 };
+
 struct opus_decoder_pvt {
 	int init;
 	OpusDecoder *dec;
 	SpeexResamplerState *resamp;
+
+	/* frame size of incoming OPUS frames to decode */
 	unsigned int frame_size;
+	/* SLIN output buffer */
 	int16_t slin_buf[OUTBUF_SIZE];
+	/* Number of slin samples in output buffer */
 	unsigned slin_samples;
 };
 
@@ -99,10 +103,26 @@ static int opus_enc_set(struct ast_trans_pvt *pvt, struct ast_format *slin_src)
 	int slin_rate = ast_format_rate(slin_src);
 	int opus_rate = slin_rate;
 	int error = 0;
+	int time_period = 0;
+	int cbr = 0;
+	int dtx = 0;
+	int fec = 0;
+	int enc_mode = OPUS_ATTR_VAL_MODE_VOICE;
+	int max_bitrate = 0;
 
 	if (pvt->explicit_dst.id) {
 		opus_rate = ast_format_rate(&pvt->explicit_dst);
+		ast_format_get_value(&pvt->explicit_dst, OPUS_ATTR_KEY_PTIME, &time_period);
+		ast_format_get_value(&pvt->explicit_dst, OPUS_ATTR_KEY_MODE, &enc_mode);
+		ast_format_get_value(&pvt->explicit_dst, OPUS_ATTR_KEY_CBR, &cbr);
+		ast_format_get_value(&pvt->explicit_dst, OPUS_ATTR_KEY_FEC, &fec);
+		ast_format_get_value(&pvt->explicit_dst, OPUS_ATTR_KEY_DTX, &dtx);
+		ast_format_get_value(&pvt->explicit_dst, OPUS_ATTR_KEY_MAX_BITRATE, &max_bitrate);
 	}
+
+	time_period = time_period ? time_period : DEFAULT_TIME_PERIOD;
+	enc_mode = enc_mode == OPUS_ATTR_VAL_MODE_VOICE ? OPUS_APPLICATION_VOIP : OPUS_APPLICATION_AUDIO;
+
 
 	if (slin_rate != opus_rate) {
 		if (!(enc->resamp = speex_resampler_init(1, slin_rate, opus_rate, 5, &error))) {
@@ -110,13 +130,26 @@ static int opus_enc_set(struct ast_trans_pvt *pvt, struct ast_format *slin_src)
 		}
 	}
 
-	if (!(enc->enc = opus_encoder_create(slin_rate, 1, OPUS_APPLICATION_VOIP))) {
+	if (!(enc->enc = opus_encoder_create(slin_rate, 1, enc_mode))) {
 		ast_log(LOG_WARNING, "Failed to create OPUS encoder\n");
 		speex_resampler_destroy(enc->resamp);
 		return -1;
 	}
 
-	enc->frame_size = opus_rate / (1000 / DEFAULT_TIME_PERIOD);
+	if (max_bitrate) {
+		opus_encoder_ctl(enc->enc, OPUS_SET_BITRATE(max_bitrate));
+	}
+	if (fec) {
+		opus_encoder_ctl(enc->enc, OPUS_SET_INBAND_FEC_FLAG(fec));
+	}
+	if (dtx) {
+		opus_encoder_ctl(enc->enc, OPUS_SET_DTX_FLAG(dtx));
+	}
+	if (cbr) {
+		opus_encoder_ctl(enc->enc, OPUS_SET_VBR_CONSTRAINT(cbr));
+	}
+
+	enc->frame_size = opus_rate / (1000 / time_period);
 	enc->sample_rate = opus_rate;
 
 	pvt->samples = 0;
@@ -276,7 +309,7 @@ static struct ast_frame *opus_enc_frameout(struct ast_trans_pvt *pvt)
 	pvt->samples = 0;
 	memset(enc->frame_offsets, 0, sizeof(enc->frame_offsets));
 	enc->frame_offsets_num = 0;
-	enc->frame_offsets_numbytes = OUTBUF_SIZE;\
+	enc->frame_offsets_numbytes = OUTBUF_SIZE;
 
 	return frame;
 }
@@ -286,12 +319,15 @@ static int opus_dec_framein(struct ast_trans_pvt *pvt, struct ast_frame *f)
 {
 	struct opus_decoder_pvt *dec = pvt->pvt;
 	int error;
+	int fec = 0;
 
 	if (!dec->init) {
 		opus_dec_set(pvt, &f->subclass.format);
 	}
 
-	error = opus_decode(dec->dec, f->data.ptr, f->datalen, dec->slin_buf, dec->frame_size, 0);
+	ast_format_get_value(&f->subclass.format, OPUS_ATTR_KEY_FEC, &fec);
+
+	error = opus_decode(dec->dec, f->data.ptr, f->datalen, dec->slin_buf, dec->frame_size, fec);
 	if (error <= 0) {
 		ast_log(LOG_WARNING, "error decoding OPUS, error code %d\n", error);
 		return -1;
