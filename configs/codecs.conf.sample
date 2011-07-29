@@ -86,6 +86,17 @@ genericplc => true
 ; is restarted.
 ;
 
+; Default Custom OPUS format definitions, only one custom OPUS format
+; per sample rate is permitted.
+
+[opus16]
+type=opus
+samprate=16000
+
+[opus48]
+type=opus
+samprate=48000
+
 ; Default Custom SILK format definitions, only one custom SILK format per
 ; sample rate is allowed.
 [silk8]
