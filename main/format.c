@@ -1344,7 +1344,7 @@ static int load_format_config(void)
 					ast_log(LOG_WARNING, "framesize '%s' at line %d of %s is not supported.\n",
 						var->value, var->lineno, FORMAT_CONFIG);
 				}
-			} else if (!strcasecmp(var->name, "constant_bit_rate")) {
+			} else if (!strcasecmp(var->name, "cbr")) {
 				settings.cbr = ast_true(var->value) ? 1 : 0;
 			} else if (!strcasecmp(var->name, "dtx")) {
 				settings.usedtx = ast_true(var->value) ? 1 : 0;

@@ -64,6 +64,8 @@ pp_dereverb_level => 0.3
 ; there is a minor performance penalty for this
 genericplc => true
 
+
+; ----- CUSTOM FORMATS ----
 ; Generate custom formats for formats requiring attributes.
 ; After defining the custom format, the name used in defining
 ; the format can be used throughout Asterisk in the format 'allow'
@@ -89,13 +91,32 @@ genericplc => true
 ; Default Custom OPUS format definitions, only one custom OPUS format
 ; per sample rate is permitted.
 
+[opus48]
+type=opus
+samprate=48000  ; Sample rate of this opus format in hz.
+                ; 8000, 12000, 16000, 24000, 48000 are acceptable values.
+;fec=true           ; turn on or off encoding with forward error correction.
+                    ; On recommended, off by default.
+;maxbitrate=10000   ; Use the table below to make sure a useful bitrate is chosen
+                    ; for maxbitrate.  If not set or value is not within the bounds
+                    ; of the encoder, a default value is chosen.
+                    ;
+                    ;  sample rate | bitrate range
+                    ;  8khz        | 6000 - 20000 bps
+                    ;  12khz       | 7000 - 25000 bps
+                    ;  16khz       | 8000 - 30000 bps
+                    ;  24khz       | 18000- 28000 bps
+                    ;  48khz       | 24000- 32000 bps
+;dtx=true       ; Encode using discontinuous transmission mode or not. Turning this
+                ; on will save bandwidth during periods of silence at the cost of
+                ; increased computational complexity.  Off by default.
+;cbr=true   ; Whether or not to encode with constant or variable bit rate. Constant
+            ; bit rate is disabled by default.
+
+
 [opus16]
 type=opus
 samprate=16000
-
-[opus48]
-type=opus
-samprate=48000
 
 ; Default Custom SILK format definitions, only one custom SILK format per
 ; sample rate is allowed.
@@ -109,7 +130,7 @@ packetloss_percentage=10   ; Estimated packet loss percentage in uplink directio
                            ; The higher the percentage, the larger amount of bandwidth is
                            ; used. Default is 0%, 10% is recommended when fec is in use.
 
-maxbitrate=10000    ; Use the table below to make sure a useful bitrate is choosen
+maxbitrate=10000    ; Use the table below to make sure a useful bitrate is chosen
                     ; for maxbitrate.  If not set or value is not within the bounds
                     ; of the encoder, a default value is chosen.
                     ;
@@ -123,13 +144,6 @@ maxbitrate=10000    ; Use the table below to make sure a useful bitrate is choos
                 ; on will save bandwidth during periods of silence at the cost of
                 ; increased computational complexity.  Off by default.
 
-[silk12]
-type=silk
-samprate=12000
-maxbitrate=12000
-fec=true
-packetloss_percentage=10;
-
 [silk16]
 type=silk
 samprate=16000
@@ -137,12 +151,21 @@ maxbitrate=20000
 fec=true
 packetloss_percentage=10;
 
-[silk24]
-type=silk
-samprate=24000
-maxbitrate=30000
-fec=true
-packetloss_percentage=10;
+; Uncomment silk24 to enable it on next restart
+;[silk12]
+;type=silk
+;samprate=12000
+;maxbitrate=12000
+;fec=true
+;packetloss_percentage=10;
+
+; Uncomment silk24 to enable it on next restart
+;[silk24]
+;type=silk
+;samprate=24000
+;maxbitrate=30000
+;fec=true
+;packetloss_percentage=10;
 
 
 ; Default custom CELT codec definitions. Only one custom CELT definition is allowed
@@ -155,10 +178,12 @@ packetloss_percentage=10;
                  ; when it is set.  Otherwise a default of framesize of 480 is assumed
                  ; internally
 
+; Uncomment celt48 to enable it on next restart
 ;[celt48]
 ;type=celt
 ;samprate=48000
 
+; Uncomment celt32 to enable it on next restart
 ;[celt32]
 ;type=celt
 ;samprate=32000

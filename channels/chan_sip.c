@@ -9514,6 +9514,22 @@ static int process_sdp_a_audio(const char *a, struct sip_pvt *p, struct ast_rtp_
 				if (sscanf(fmtp_string, "useinbandfec=%30u", &val) == 1) {
 					ast_format_append(format, SILK_ATTR_KEY_FEC, val ? 1 : 0, AST_FORMAT_ATTR_END);
 				}
+			case AST_FORMAT_OPUS:
+				if (sscanf(fmtp_string, "maxcodedaudiobandwidth=%30u", &val) == 1) {
+					ast_format_append(format, OPUS_ATTR_KEY_SAMP_RATE, val, AST_FORMAT_ATTR_END);
+				}
+				if (sscanf(fmtp_string, "maxaveragebitrate=%30u", &val) == 1) {
+					ast_format_append(format, OPUS_ATTR_KEY_MAX_BITRATE, val, AST_FORMAT_ATTR_END);
+				}
+				if (sscanf(fmtp_string, "cbr=%30u", &val) == 1) {
+					ast_format_append(format, OPUS_ATTR_KEY_CBR, val ? 1 : 0, AST_FORMAT_ATTR_END);
+				}
+				if (sscanf(fmtp_string, "useinbandfec=%30u", &val) == 1) {
+					ast_format_append(format, OPUS_ATTR_KEY_FEC, val ? 1 : 0, AST_FORMAT_ATTR_END);
+				}
+				if (sscanf(fmtp_string, "usedtx=%30u", &val) == 1) {
+					ast_format_append(format, OPUS_ATTR_KEY_DTX, val ? 1 : 0, AST_FORMAT_ATTR_END);
+				}
 				break;
 			}
 		}
@@ -10889,6 +10905,22 @@ static void add_codec_to_sdp(const struct sip_pvt *p,
 			ast_str_append(a_buf, 0, "a=fmtp:%d useinbandfec=%u\r\n", rtp_code, val ? 1 : 0);
 		}
 		break;
+	case AST_FORMAT_OPUS:
+		if (!ast_format_get_value(format, OPUS_ATTR_KEY_SAMP_RATE, &val)) {
+			ast_str_append(a_buf, 0, "a=fmtp:%d maxcodedaudiobandwidth=%u\r\n", rtp_code, val);
+		}
+		if (!ast_format_get_value(format, OPUS_ATTR_KEY_MAX_BITRATE, &val) && val > 5000 && val < 500000) {
+			ast_str_append(a_buf, 0, "a=fmtp:%d maxaveragebitrate=%u\r\n", rtp_code, val);
+		}
+		if (!ast_format_get_value(format, OPUS_ATTR_KEY_CBR, &val)) {
+			ast_str_append(a_buf, 0, "a=fmtp:%d cbr=%u\r\n", rtp_code, val ? 1 : 0);
+		}
+		if (!ast_format_get_value(format, OPUS_ATTR_KEY_FEC, &val)) {
+			ast_str_append(a_buf, 0, "a=fmtp:%d useinbandfec=%u\r\n", rtp_code, val ? 1 : 0);
+		}
+		if (!ast_format_get_value(format, OPUS_ATTR_KEY_DTX, &val)) {
+			ast_str_append(a_buf, 0, "a=fmtp:%d usedtx=%u\r\n", rtp_code, val ? 1 : 0);
+		}
 	}
 
 	if (fmt.cur_ms && (fmt.cur_ms < *min_packet_size))
