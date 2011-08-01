@@ -147,7 +147,8 @@ static int opus_getjoint(const struct ast_format_attr *fattr1, const struct ast_
 	struct opus_attr *attr_res = (struct opus_attr *) result;
 	int joint = -1;
 
-	attr_res->samplerate = attr1->samplerate & attr2->samplerate;
+	attr_res->samplerate = MIN(attr1->samplerate, attr2->samplerate);
+
 	/* sample rate is the only attribute that has any bearing on if joint capabilities exist or not */
 	if (attr_res->samplerate) {
 		joint = 0;

@@ -69,6 +69,8 @@ struct opus_encoder_pvt {
 	int16_t slin_buf[OUTBUF_SIZE];
 	/* Current number of samples in our slin input buffer */
 	unsigned slin_samples;
+	/* The input slin sample rate */
+	unsigned int slin_sample_rate;
 	/* The number of slin samples to encode at a time */
 	unsigned int frame_size;
 	/* OPUS output sample rate */
@@ -97,7 +99,7 @@ struct opus_decoder_pvt {
 	unsigned slin_samples;
 };
 
-static int opus_enc_set(struct ast_trans_pvt *pvt, struct ast_format *slin_src)
+static int opus_enc_set(struct ast_trans_pvt *pvt, struct ast_format *slin_src, int slin_frame_ms)
 {
 	struct opus_encoder_pvt *enc = pvt->pvt;
 	int slin_rate = ast_format_rate(slin_src);
@@ -120,9 +122,20 @@ static int opus_enc_set(struct ast_trans_pvt *pvt, struct ast_format *slin_src)
 		ast_format_get_value(&pvt->explicit_dst, OPUS_ATTR_KEY_MAX_BITRATE, &max_bitrate);
 	}
 
-	time_period = time_period ? time_period : DEFAULT_TIME_PERIOD;
-	enc_mode = enc_mode == OPUS_ATTR_VAL_MODE_VOICE ? OPUS_APPLICATION_VOIP : OPUS_APPLICATION_AUDIO;
+	time_period = time_period ? time_period : slin_frame_ms;
 
+	switch (time_period) {
+	/* make sure the time period is valid before sending it to the encoder */
+	case OPUS_ATTR_VAL_PTIME_5:
+	case OPUS_ATTR_VAL_PTIME_10:
+	case OPUS_ATTR_VAL_PTIME_20:
+	case OPUS_ATTR_VAL_PTIME_40:
+	case OPUS_ATTR_VAL_PTIME_60:
+		break;
+	default:
+		time_period = DEFAULT_TIME_PERIOD;
+	}
+	enc_mode = enc_mode == OPUS_ATTR_VAL_MODE_VOICE ? OPUS_APPLICATION_VOIP : OPUS_APPLICATION_AUDIO;
 
 	if (slin_rate != opus_rate) {
 		if (!(enc->resamp = speex_resampler_init(1, slin_rate, opus_rate, 5, &error))) {
@@ -130,7 +143,7 @@ static int opus_enc_set(struct ast_trans_pvt *pvt, struct ast_format *slin_src)
 		}
 	}
 
-	if (!(enc->enc = opus_encoder_create(slin_rate, 1, enc_mode))) {
+	if (!(enc->enc = opus_encoder_create(opus_rate, 1, enc_mode))) {
 		ast_log(LOG_WARNING, "Failed to create OPUS encoder\n");
 		speex_resampler_destroy(enc->resamp);
 		return -1;
@@ -149,6 +162,7 @@ static int opus_enc_set(struct ast_trans_pvt *pvt, struct ast_format *slin_src)
 		opus_encoder_ctl(enc->enc, OPUS_SET_VBR_CONSTRAINT(cbr));
 	}
 
+
 	enc->frame_size = opus_rate / (1000 / time_period);
 	enc->sample_rate = opus_rate;
 
@@ -156,6 +170,7 @@ static int opus_enc_set(struct ast_trans_pvt *pvt, struct ast_format *slin_src)
 	memset(enc->frame_offsets, 0, sizeof(enc->frame_offsets));
 	enc->frame_offsets_num = 0;
 	enc->frame_offsets_numbytes = OUTBUF_SIZE;
+	enc->slin_sample_rate = slin_rate;
 
 	enc->init = 1;
 
@@ -221,7 +236,7 @@ static int opus_enc_framein(struct ast_trans_pvt *pvt, struct ast_frame *f)
 	int num_bytes = 0;
 
 	if (!enc->init) {
-		opus_enc_set(pvt, &f->subclass.format);
+		opus_enc_set(pvt, &f->subclass.format, f->len);
 	}
 
 	if (!f->datalen) {
@@ -248,12 +263,12 @@ static int opus_enc_framein(struct ast_trans_pvt *pvt, struct ast_frame *f)
 	slin_data = enc->slin_buf;
 	opus_data = (unsigned char *) pvt->outbuf.c;
 
-
 	for ( ; enc->slin_samples >= enc->frame_size; enc->slin_samples -= enc->frame_size) {
+
 		num_bytes = opus_encode(enc->enc, slin_data, enc->frame_size, opus_data, enc->frame_offsets_numbytes);
 
 		if (num_bytes <= 0) {
-			/* err */
+			ast_log(LOG_WARNING, "OPUS encoder failed to encode frame. error %d \n", num_bytes);
 			break;
 		}
 
@@ -280,6 +295,7 @@ static struct ast_frame *opus_enc_frameout(struct ast_trans_pvt *pvt)
 	struct ast_frame *frame = NULL;
 	struct ast_frame *cur = NULL;
 	struct ast_frame tmp;
+	int ms;
 	int i;
 
 	for (i = 0; i < enc->frame_offsets_num; i++) {
@@ -291,6 +307,14 @@ static struct ast_frame *opus_enc_frameout(struct ast_trans_pvt *pvt)
 			ast_format_set(&tmp.subclass.format, AST_FORMAT_OPUS,
 				OPUS_ATTR_KEY_SAMP_RATE, enc->sample_rate);
 		}
+
+		/* determine how many ms are in this frame */
+		ms = (enc->frame_size * 1000) / enc->slin_sample_rate;
+		ast_format_append(&tmp.subclass.format,
+			OPUS_ATTR_KEY_PTIME, ms,
+			AST_FORMAT_ATTR_END);
+
+		tmp.len = ms;
 		tmp.datalen = enc->frame_offsets[i].len;
 		tmp.data.ptr = enc->frame_offsets[i].buf;
 		tmp.samples = enc->frame_size;

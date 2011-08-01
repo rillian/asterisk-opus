@@ -25,6 +25,10 @@
 #ifndef _AST_FORMAT_OPUS_H_
 #define _AST_FORMAT_OPUS_H_
 
+/* TODO
+ * Opus needs better support for encoding/decoding frames of time intervals differing from 20ms.
+ */
+
 /*! OPUS format attribute key value pairs, all are accessible through ast_format_get_value()*/
 enum opus_attr_keys {
 	OPUS_ATTR_KEY_SAMP_RATE, /*!< value is in opus_attr_vals enum */
