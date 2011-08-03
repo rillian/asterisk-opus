@@ -367,6 +367,7 @@ AC_SUBST(AST_CODE_COVERAGE)
 # to make things easier for the users.
 
 AST_EXT_LIB_SETUP([ALSA], [Advanced Linux Sound Architecture], [asound])
+AST_EXT_LIB_SETUP([OPUS], [Opus Codec], [opus])
 AST_EXT_LIB_SETUP([BFD], [Debug symbol decoding], [bfd])
 
 # BKTR is used for backtrace support on platforms that do not
@@ -1053,6 +1054,7 @@ AC_CHECK_TOOL(PKGCONFIG, pkg-config, No)
 # do the package library checks now
 
 AST_EXT_LIB_CHECK([ALSA], [asound], [snd_spcm_init], [alsa/asoundlib.h], [-lm -ldl])
+AST_EXT_LIB_CHECK([OPUS], [opus], [opus_encode], [opus/opus.h], [-lm])
 
 AST_EXT_LIB_CHECK([BFD], [bfd], [bfd_openr], [bfd.h])
 

@@ -26,6 +26,13 @@
  *
  */
 
+/*** MODULEINFO
+	<depend>opus</depend>
+	<support_level>core</support_level>
+ ***/
+
+
+
 #include "asterisk.h"
 #include "speex/speex_resampler.h"
 
