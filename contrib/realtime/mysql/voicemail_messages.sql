@@ -25,5 +25,7 @@ CREATE TABLE voicemail_messages (
 	mailboxuser CHAR(30),
 	-- Context of the owner of the mailbox
 	mailboxcontext CHAR(30),
+	-- Nuevo en asterisk 11
+	msg_id CHAR(80),
 	PRIMARY KEY (dir, msgnum)
 );
